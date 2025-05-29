@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
+import {
+  StyleSheet,
+  View,
+  Modal,
+  Text,
+  TouchableOpacity,
+  Linking,
+  Image,
+} from "react-native";
 import MapView, { Marker } from "react-native-maps";
-import { StyleSheet, View } from "react-native";
-
 import * as Location from "expo-location";
 
 export default function App() {
@@ -9,6 +16,14 @@ export default function App() {
     null
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedMarker, setSelectedMarker] = useState<{
+    title: string;
+    description: string;
+    coordinate: { latitude: number; longitude: number };
+  } | null>(null);
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -25,15 +40,19 @@ export default function App() {
     getCurrentLocation();
   }, []);
 
-  let text = "Waiting...";
-  if (errorMsg) {
-    text = errorMsg;
-    console.error("Error fetching location:", errorMsg);
-  } else if (location) {
-    text = JSON.stringify(location);
-    console.log("Current Location:", location);
-  }
+  const openGoogleMaps = (latitude: number, longitude: number) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+    Linking.openURL(url);
+  };
 
+  const handleMarkerPress = (
+    title: string,
+    description: string,
+    coordinate: any
+  ) => {
+    setSelectedMarker({ title, description, coordinate });
+    setModalVisible(true);
+  };
   const blueMapStyle = [
     {
       elementType: "geometry",
@@ -120,7 +139,7 @@ export default function App() {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: 6.9271, // Center on Colombo
+          latitude: 6.9271,
           longitude: 79.8612,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
@@ -132,21 +151,74 @@ export default function App() {
       >
         <Marker
           coordinate={{ latitude: 6.9271, longitude: 79.8612 }}
-          title="Colombo"
-          description="Capital of Sri Lanka"
-          onPress={() => alert("Marker Pressed!")}
+          title="Abc Hospital"
+          description="This is a description of the hospital."
+          onPress={() =>
+            handleMarkerPress(
+              "Abc Hospital",
+              "This is a description of the hospital.",
+              { latitude: 6.9271, longitude: 79.8612 }
+            )
+          }
+          icon={require("./assets/hospital.png")}
         />
 
         <Marker
           coordinate={{ latitude: 6.9621, longitude: 79.9076 }}
-          title="Colombo Port City"
-          description="Modern waterfront district"
+          title="Peliyagoda Hospital"
+          description="Another hospital in the area."
+          onPress={() =>
+            handleMarkerPress(
+              "Peliyagoda Hospital",
+              "Another hospital in the area.",
+              { latitude: 6.9621, longitude: 79.9076 }
+            )
+          }
         />
       </MapView>
+
+      {/* Modal */}
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{selectedMarker?.title}</Text>
+            <Text style={styles.modalDesc}>{selectedMarker?.description}</Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => {
+                if (selectedMarker) {
+                  openGoogleMaps(
+                    selectedMarker.coordinate.latitude,
+                    selectedMarker.coordinate.longitude
+                  );
+                }
+                setModalVisible(false);
+              }}
+            >
+              <Text style={styles.buttonText}>Go to Location</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: "#ccc", marginTop: 10 },
+              ]}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={[styles.buttonText, { color: "#333" }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -154,5 +226,38 @@ const styles = StyleSheet.create({
   map: {
     width: "100%",
     height: "100%",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderTopRightRadius: 20,
+    borderTopLeftRadius: 20,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalDesc: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  button: {
+    backgroundColor: "#1e90ff",
+    padding: 12,
+    borderRadius: 10,
+    width: "80%",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
